@@ -48,9 +48,11 @@ module Authlogic
         # @api private
         def insensitive_comparison
           if AR_GEM_VERSION > Gem::Version.new("5.3")
-            @model_class.connection.case_insensitive_comparison(
-              @model_class.arel_table[@field], @value
-            )
+            with_connection do |connection|
+              connection.case_insensitive_comparison(
+                @model_class.arel_table[@field], @value
+              )
+            end
           else
             @model_class.connection.case_insensitive_comparison(
               @model_class.arel_table,
@@ -65,9 +67,11 @@ module Authlogic
         def sensitive_comparison
           bound_value = @model_class.predicate_builder.build_bind_attribute(@field, @value)
           if AR_GEM_VERSION > Gem::Version.new("5.3")
-            @model_class.connection.case_sensitive_comparison(
-              @model_class.arel_table[@field], bound_value
-            )
+            with_connection do |connection|
+              connection.case_sensitive_comparison(
+                @model_class.arel_table[@field], bound_value
+              )
+            end
           else
             @model_class.connection.case_sensitive_comparison(
               @model_class.arel_table,
@@ -75,6 +79,15 @@ module Authlogic
               @model_class.columns_hash[@field],
               bound_value
             )
+          end
+        end
+
+        # @api private
+        def with_connection(&)
+          if AR_GEM_VERSION >= Gem::Version.new("7")
+            @model_class.connection_pool.with_connection(&)
+          else
+            yield @model_class.connection
           end
         end
       end
